@@ -1,0 +1,7 @@
+castnet.db
+cell_cache.json
+*.log
+__pycache__/
+*.pyc
+.env
+castnet_report_*.json
