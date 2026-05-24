@@ -29,7 +29,8 @@ env/
 rayhunter_report_*.json
 rayhunter_manifest_*.csv
 rayhunter_manifest_*.json
-*.html
+*.html`n!dashboard/castnet_map.html
+!dashboard/castnet_map.html
 
 # Logs
 *.log
