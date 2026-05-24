@@ -1,4 +1,4 @@
-# CAStNET 🎣
+# CASTNET 🎣
 
 **Distributed Civilian IMSI Catcher Detection and Geolocation Network**
 
