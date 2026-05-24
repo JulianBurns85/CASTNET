@@ -1,190 +1,146 @@
-# CASTNET 🎣
+# castnet-registry 🎣
 
-**Distributed Civilian IMSI Catcher Detection and Geolocation Network**
+**Global Rogue Cell ID Registry — Community IMSI Catcher Intelligence**
 
-> Where [Rayhunter Threat Analyzer](https://github.com/JulianBurns85/rayhunter-threat-analyzer) is the forensic lab, Castnet is the net.
-
-Built as the live operational layer for an ongoing IMSI catcher investigation — Cranbourne East, Victoria, Australia, 2026.
-
-![Python 3.9+](https://img.shields.io/badge/python-3.9%2B-blue) ![License: MIT](https://img.shields.io/badge/license-MIT-green) ![Status: Live](https://img.shields.io/badge/status-live-brightgreen)
+> The shared intelligence layer for the [CASTNET](https://github.com/JulianBurns85/CASTNET) distributed detection network.
 
 ---
 
-## What It Does
+## What This Is
 
-Every Castnet **node** (a phone, tablet, or vehicle dongle) passively monitors cellular signals and reports confirmed rogue Cell ID detections — tagged with GPS coordinates, RSRP signal strength, and Timing Advance — to a central **aggregation API** running on a Raspberry Pi.
+A community-maintained, privacy-first database of confirmed rogue Cell IDs associated with IMSI catcher / rogue base station activity worldwide.
 
-When three or more nodes detect the same rogue CID simultaneously, **trilateration runs automatically** and the attacker's physical location is estimated.
-
-A live **Leaflet.js map dashboard** shows all detections, node status, and signal data in real time.
+Every [CASTNET](https://github.com/JulianBurns85/CASTNET) node automatically syncs this registry. Every new confirmed CID immediately protects every node operator worldwide.
 
 ---
 
-## Architecture
+## Privacy Model
 
-```
-castnet_node.py          (phone / tablet / OBD-II dongle)
-       |
-       | POST /api/v1/report  (via Tailscale WireGuard — encrypted)
-       v
-castnet_api.py           (Raspberry Pi — Flask + SQLite)
-       |
-       | GET /map
-       v
-castnet_map.html         (Leaflet.js live map dashboard — browser)
-```
+This registry contains **zero identifying information about contributors.**
 
----
+| Included | Excluded |
+|---|---|
+| ✅ Cell ID, TAC, MCC, MNC | ❌ GPS coordinates |
+| ✅ Carrier, country, region (city level) | ❌ Contributor identity |
+| ✅ Detection methods | ❌ Node IDs |
+| ✅ Hardware profile | ❌ Precise timestamps |
+| ✅ Confidence level | ❌ Movement data |
 
-## Components
-
-| Component | Location | Description |
-|---|---|---|
-| Field node | `node/castnet_node.py` | Runs on Android (Termux) or Linux. No root required. |
-| Central API | `api/castnet_api.py` | Flask REST API + SQLite. Runs on Raspberry Pi 24/7 via systemd. |
-| Map dashboard | `dashboard/castnet_map.html` | Green-on-black Leaflet.js live map. Auto-refreshes every 30s. |
-| systemd service | `docs/castnet-api.service` | Auto-start and auto-restart on Pi boot. |
+The registry records **where the attacker is** — never **where the reporter is.**
 
 ---
 
-## Quick Start
+## How to Use
 
-### Central API (Raspberry Pi)
+### Automatic sync (CASTNET nodes)
 
 ```bash
-mkdir ~/castnet
-cd ~/castnet
-pip install flask --break-system-packages
-python castnet_api.py
-# Listening on 0.0.0.0:5000
+# Add to crontab — daily sync at 2am
+0 2 * * * python3 ~/castnet/castnet_sync.py
 ```
 
-Auto-start on boot:
-
-```bash
-sudo cp docs/castnet-api.service /etc/systemd/system/
-sudo systemctl enable castnet-api
-sudo systemctl start castnet-api
-```
-
-### Field Node (Android Termux / Linux)
-
-```bash
-# Termux prerequisites
-pkg install termux-api
-pip install requests
-
-# Edit castnet_node.py — set NODE_ID and CASTNET_API
-python castnet_node.py
-```
-
-### Map Dashboard
-
-Open in any browser on the same Tailscale network:
-
-```
-http://<pi-tailscale-ip>:5000/map
-```
-
----
-
-## API Endpoints
-
-| Method | Endpoint | Description |
-|---|---|---|
-| `POST` | `/api/v1/report` | Receive detection from node |
-| `GET` | `/api/v1/detections` | All detections (filterable by hours, CID, rogue_only) |
-| `GET` | `/api/v1/summary` | Live stats — nodes, detection counts, last hit |
-| `GET` | `/api/v1/map` | GeoJSON for Leaflet map |
-| `GET` | `/map` | Serve live map dashboard |
-
----
-
-## Live Network — Cranbourne East Investigation
-
-Currently operational with two nodes monitoring confirmed rogue Cell IDs associated with an active IMSI catcher investigation.
-
-| Node | Device | Status |
-|---|---|---|
-| `ulefone_tab4_node1` | Ulefone Android tablet | ✅ Live |
-| `grapher` | Pixel 9 Pro (GrapheneOS) | ✅ Live |
-
-**Confirmed rogue CIDs monitored (15 total):**
+### Manual import
 
 ```python
-# Telstra AU (MCC=505 MNC=001 TAC=12385)
-137713195, 137713175, 137713165, 137713155, 135836191
+import yaml, requests
 
-# Vodafone AU (MCC=505 MNC=003 TAC=30336)
-8409357, 8409367, 8409387, 8409397
+url = "https://raw.githubusercontent.com/JulianBurns85/castnet-registry/main/castnet_global_registry.yaml"
+registry = yaml.safe_load(requests.get(url).text)
 
-# Post-ACMA visit CIDs (appeared 8 May 2026)
-8666381, 8666391, 8666411
+KNOWN_ROGUE_CIDS = {
+    entry['cid']
+    for entry in registry['confirmed_rogue_cids']
+    if entry['confidence'] in ('HIGH', 'MEDIUM')
+}
 ```
 
-Full forensic analysis of these CIDs: [rayhunter-threat-analyzer](https://github.com/JulianBurns85/rayhunter-threat-analyzer)
+### rayhunter-threat-analyzer integration
+
+The registry is directly compatible with the rayhunter-threat-analyzer intelligence database. Drop `castnet_global_registry.yaml` into `intelligence/db/` and it will be loaded automatically.
 
 ---
 
-## Roadmap
+## Current Registry
 
-- [x] v0.1 — Field node (Termux) + central API (Flask/SQLite) + Tailscale reporting
-- [x] v0.1 — systemd auto-start on Pi boot
-- [x] v0.1 — Leaflet.js live map dashboard
-- [x] v0.1 — Two-node live network operational
-- [ ] v0.2 — Node heartbeat + offline detection buffering
-- [ ] v0.3 — GPS tagging on mobile nodes
-- [ ] v0.4 — Trilateration engine (3+ nodes + RSRP)
-- [ ] v0.5 — RSRP signal strength heat map overlay
-- [ ] v1.0 — OBD-II vehicle node (Pi Zero 2W — mobile sweep capability)
+| Region | Carrier | CIDs | Hardware | Confidence |
+|---|---|---|---|---|
+| Cranbourne East, VIC, AU | Telstra AU | 6 | Harris HailStorm/StingRay II | HIGH |
+| Cranbourne East, VIC, AU | Vodafone AU | 6 | Harris HailStorm/StingRay II | HIGH |
+| Cranbourne East, VIC, AU | Vodafone AU | 3 | Harris (post-reconfiguration) | HIGH |
 
----
+**13 HIGH confidence + 1 MEDIUM confidence entries**
 
-## Hardware
-
-**Central (Pi):**
-- Raspberry Pi 5 (API + Pi-hole + Tailscale + ARIA)
-
-**Nodes:**
-- Android tablet — Termux + termux-telephony-cellinfo
-- Pixel 9 Pro (GrapheneOS) — Termux + termux-telephony-cellinfo
-
-**Planned:**
-- bladeRF 2.0 micro xA4 (SDR layer — Phase 2)
-- MikroTik Chateau 5G (cellular monitoring uplink)
-- Pi Zero 2W in OBD-II enclosure (vehicle node)
+Full forensic analysis of the Cranbourne East investigation: [rayhunter-threat-analyzer](https://github.com/JulianBurns85/rayhunter-threat-analyzer)
 
 ---
 
-## Related Projects
+## How to Contribute
 
-- [rayhunter-threat-analyzer](https://github.com/JulianBurns85/rayhunter-threat-analyzer) — forensic batch analysis tool; the lab to Castnet's net
-- [EFF Rayhunter](https://github.com/EFForg/rayhunter) — the open-source IMSI catcher detector Castnet nodes complement
-- [SeaGlass](https://seaglass.cs.washington.edu/) — University of Washington distributed IMSI catcher detection (inspiration)
+### Minimum evidence for submission
+
+**HIGH confidence** requires at least two of:
+- Confirmed absence from OpenCelliD or anomalous position
+- Behavioural indicator (metronomic timer, IMEISV harvesting, cipher downgrade)
+- Cross-session consistency (observed across multiple independent captures)
+- Regulatory confirmation (ACMA, FCC, Ofcom, etc.)
+
+**MEDIUM confidence** requires:
+- Single detection method with consistent observations
+- Plausible absence from legitimate carrier infrastructure
+
+### Submission process
+
+1. Fork this repo
+2. Add your entry to `castnet_global_registry.yaml` following the schema
+3. Submit a pull request with a brief description of evidence
+4. Do **not** include GPS coordinates, node IDs, or any identifying information
+
+### Entry schema
+
+```yaml
+- cid: 12345678
+  tac: 12345
+  mcc: 505
+  mnc: "01"
+  carrier: "Carrier Name"
+  country: "AU"
+  region: "City/Suburb, State"
+  first_confirmed: "YYYY-MM"
+  detection_methods:
+    - "Method 1"
+    - "Method 2"
+  confidence: "HIGH"
+  hardware_profile: "Harris HailStorm / unknown"
+  observations: 100
+  notes: "Any relevant context"
+```
+
+---
+
+## Ecosystem
+
+| Repo | Role |
+|---|---|
+| [rayhunter-threat-analyzer](https://github.com/JulianBurns85/rayhunter-threat-analyzer) | Forensic batch analysis — generate confirmed CIDs |
+| [CASTNET](https://github.com/JulianBurns85/CASTNET) | Live detection network — consume this registry |
+| **castnet-registry** | Shared intelligence — you are here |
 
 ---
 
 ## Legal
 
-**Passive monitoring only. No transmission. No network impersonation.**
+Contributing to this registry does not constitute interception, transmission, or interference with communications. Passive reception of cellular signals and documentation of anomalous Cell IDs is lawful in most jurisdictions.
 
-Australia: Radiocommunications Act 1992 (Cth) — passive reception of signals does not constitute radiocommunication and requires no licence.
-
-Regulatory actions on file from the parent investigation:
-- ACMA ENQ-1851DVJH04
-- TIO 2026-03-04898
-- VicPol CIRS-20260331-141
+Consult local telecommunications law before deploying detection hardware.
 
 ---
 
 ## License
 
-MIT — see LICENSE
+CC0 1.0 Universal — public domain. No rights reserved.
 
----
-
-*Built with a Raspberry Pi 5, two Android devices, too much coffee, and justifiable paranoia.*
+Intelligence should be free.
 
 *— Julian Burns, Cranbourne East VIC, 2026*
 
-*"Because Stingrays are fish too. G#y Fish" - KanyRay West🎣*
+*"Because Stingrays are fish too. G#y Fish" — KanyRay West 🎣*
