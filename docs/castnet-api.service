@@ -1,0 +1,14 @@
+﻿[Unit]
+Description=Castnet API — Civilian IMSI Catcher Detection Network
+After=network.target tailscaled.service
+
+[Service]
+Type=simple
+User=overkill
+WorkingDirectory=/home/overkill/castnet
+ExecStart=/usr/bin/python3 /home/overkill/castnet/castnet_api.py
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
