@@ -1,7 +1,3 @@
-![CASTNET — Gone Phishing Edition](https://github.com/user-attachments/assets/898598db-a451-468e-8fc0-24c9bda41c07)
-
-<img width="1456" height="812" alt="map" src="https://github.com/user-attachments/assets/ed764e1d-7eae-409a-9418-443ab367c6be" />
-
 # CASTNET 🎣
 
 **Distributed Civilian IMSI Catcher Detection and Geolocation Network**
