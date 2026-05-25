@@ -22,7 +22,7 @@ A live **Leaflet.js map dashboard** shows all detections, node status, and signa
 
 ## Live Dashboard
 
-![CASTNET live dashboard projected — Cranbourne East, 25 May 2026](https://github.com/user-attachments/assets/898598db-a451-468e-8fc0-24c9bda41c07)
+
 
 <img width="1456" height="812" alt="map" src="https://github.com/user-attachments/assets/34c4acca-fcdd-4eba-9963-d4f0ad9590e3" />
 
