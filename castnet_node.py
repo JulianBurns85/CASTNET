@@ -25,6 +25,7 @@ Configuration:
 
 Version history:
   v0.1   (May 2026) — Initial build. Termux telephony, GPS, API reporting.
+  v0.2   (May 2026) -- Offline buffer with auto-flush on reconnect.
   v0.1.1 (May 2026) — API key auth added. Portable log path (no Termux hardcode).
                       Config moved to environment variables + constants block.
                       Watchlist CIDs added. Linux cell fallback stub added.
@@ -46,7 +47,9 @@ API_KEY       = os.environ.get("CASTNET_API_KEY", "")
 POLL_INTERVAL = int(os.environ.get("CASTNET_POLL", "30"))
 
 # Portable log path — works on Termux, Linux, Windows
-LOG_FILE = Path.home() / "castnet_log.json"
+LOG_FILE   = Path.home() / "castnet_log.json"
+QUEUE_FILE = Path.home() / "castnet_offline_queue.json"
+QUEUE_MAX  = 500
 
 IS_TERMUX = "com.termux" in str(Path.home())
 
@@ -152,30 +155,55 @@ def log_event(event):
         print(f"  [ERROR] Log write failed: {e}")
 
 
-# ── API reporting ─────────────────────────────────────────────────────────────
-def report_to_api(event):
+# -- Offline queue ----------------------------------------------------------------
+def queue_event(event):
     try:
-        import requests
-        headers = {}
-        if API_KEY:
-            headers["X-Castnet-Key"] = API_KEY
-        else:
-            print("  [WARN] CASTNET_API_KEY not set — reporting unauthenticated")
-
-        resp = requests.post(CASTNET_API, json=event, headers=headers, timeout=5)
-
-        if resp.status_code == 200:
-            print(f"  [API] ✅ Reported to Castnet central — {resp.json().get('status')}")
-        elif resp.status_code == 401:
-            print(f"  [API] ❌ Auth failed — check CASTNET_API_KEY")
-        else:
-            print(f"  [API] ⚠️  Unexpected response {resp.status_code}")
-
+        import json as _json
+        existing = []
+        if QUEUE_FILE.exists():
+            existing = _json.loads(QUEUE_FILE.read_text(encoding="utf-8"))
+        existing.append(event)
+        if len(existing) > QUEUE_MAX:
+            existing = existing[-QUEUE_MAX:]
+        QUEUE_FILE.write_text(_json.dumps(existing, indent=2), encoding="utf-8")
+        print(f"  [QUEUE] Buffered offline -- {len(existing)} event(s) queued")
     except Exception as e:
-        print(f"  [API] Offline — local log only ({e})")
+        print(f"  [ERROR] Queue write failed: {e}")
 
 
-# ── Main loop ─────────────────────────────────────────────────────────────────
+def flush_offline_queue(headers):
+    import json as _json
+    if not QUEUE_FILE.exists():
+        return
+    try:
+        queued = _json.loads(QUEUE_FILE.read_text(encoding="utf-8"))
+    except Exception:
+        return
+    if not queued:
+        return
+    import requests
+    print(f"  [QUEUE] Flushing {len(queued)} buffered event(s)...")
+    flushed, failed = 0, []
+    for ev in queued:
+        try:
+            r = requests.post(CASTNET_API, json=ev, headers=headers, timeout=5)
+            if r.status_code == 200:
+                flushed += 1
+            else:
+                failed.append(ev)
+        except Exception:
+            failed.append(ev)
+            break
+    if flushed:
+        print(f"  [QUEUE] Flushed {flushed} event(s)")
+    QUEUE_FILE.write_text(_json.dumps(failed, indent=2), encoding="utf-8")
+    if not failed:
+        QUEUE_FILE.unlink(missing_ok=True)
+
+
+# ── API reporting ─────────────────────────────────────────────────────────────
+
+
 def main():
     print(f"""
   CASTNET — Civilian IMSI Catcher Detection Network
