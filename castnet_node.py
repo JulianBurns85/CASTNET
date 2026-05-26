@@ -204,6 +204,72 @@ def flush_offline_queue(headers):
 # ── API reporting ─────────────────────────────────────────────────────────────
 
 
+
+# -- Offline queue ----------------------------------------------------------------
+def queue_event(event):
+    import json as _j
+    try:
+        existing = _j.loads(QUEUE_FILE.read_text(encoding='utf-8')) if QUEUE_FILE.exists() else []
+        existing.append(event)
+        if len(existing) > QUEUE_MAX:
+            existing = existing[-QUEUE_MAX:]
+        QUEUE_FILE.write_text(_j.dumps(existing, indent=2), encoding='utf-8')
+        print(f"  [QUEUE] Buffered -- {len(existing)} event(s) queued")
+    except Exception as e:
+        print(f"  [ERROR] Queue write failed: {e}")
+
+
+def flush_offline_queue(headers):
+    import json as _j
+    if not QUEUE_FILE.exists():
+        return
+    try:
+        queued = _j.loads(QUEUE_FILE.read_text(encoding='utf-8'))
+    except Exception:
+        return
+    if not queued:
+        return
+    import requests as _r
+    print(f"  [QUEUE] Flushing {len(queued)} buffered event(s)...")
+    flushed, failed = 0, []
+    for ev in queued:
+        try:
+            r = _r.post(CASTNET_API, json=ev, headers=headers, timeout=5)
+            if r.status_code == 200:
+                flushed += 1
+            else:
+                failed.append(ev)
+        except Exception:
+            failed.append(ev)
+            break
+    if flushed:
+        print(f"  [QUEUE] Flushed {flushed} event(s)")
+    QUEUE_FILE.write_text(_j.dumps(failed, indent=2), encoding='utf-8')
+    if not failed:
+        QUEUE_FILE.unlink(missing_ok=True)
+
+
+def report_to_api(event):
+    import requests
+    headers = {}
+    if API_KEY:
+        headers["X-Castnet-Key"] = API_KEY
+    else:
+        print("  [WARN] CASTNET_API_KEY not set -- unauthenticated")
+    flush_offline_queue(headers)
+    try:
+        resp = requests.post(CASTNET_API, json=event, headers=headers, timeout=5)
+        if resp.status_code == 200:
+            print(f"  [API] Reported to Castnet central -- {resp.json().get('status')}")
+        elif resp.status_code == 401:
+            print("  [API] Auth failed -- check CASTNET_API_KEY")
+        else:
+            print(f"  [API] Unexpected response {resp.status_code}")
+    except Exception as e:
+        print(f"  [API] Offline -- queued for retry ({e})")
+        queue_event(event)
+
+
 def main():
     print(f"""
   CASTNET — Civilian IMSI Catcher Detection Network
