@@ -6,6 +6,7 @@
 <title>CASTNET — Civilian IMSI Catcher Detection Network</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.heat/0.2.0/leaflet-heat.js"></script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&display=swap');
 
@@ -347,6 +348,13 @@
       <span class="status-label">TOTAL EVENTS</span>
       <span class="status-value" id="hdr-total">--</span>
     </div>
+  
+  <button id="heat-toggle" onclick="toggleHeat()" style="
+    background:transparent;border:1px solid #004010;color:#00aa2a;
+    font-family:inherit;font-size:0.75em;padding:4px 10px;cursor:pointer;
+    letter-spacing:1px;" title="Toggle RSRP heat map">
+    [HEAT: OFF]
+  </button>
   </div>
 </header>
 
@@ -585,6 +593,52 @@ async function fetchDetections() {
 }
 
 // ── Fetch: map GeoJSON ────────────────────────────────────────────────────────
+
+// -- RSRP Heat layer -----------------------------------------------------------
+let heatLayer = null;
+let heatEnabled = false;
+
+function toggleHeat() {
+  heatEnabled = !heatEnabled;
+  document.getElementById('heat-toggle').textContent =
+    heatEnabled ? '[HEAT: ON]' : '[HEAT: OFF]';
+  document.getElementById('heat-toggle').style.color =
+    heatEnabled ? '#ff2a2a' : '#00aa2a';
+  if (!heatEnabled && heatLayer) {
+    map.removeLayer(heatLayer);
+    heatLayer = null;
+  }
+}
+
+function updateHeatLayer(features) {
+  if (!heatEnabled) return;
+  if (heatLayer) map.removeLayer(heatLayer);
+
+  // Convert RSRP to intensity -- RSRP range typically -140 to -44 dBm
+  // Stronger signal (less negative) = higher intensity = hotter on map
+  const points = features
+    .filter(f => f.geometry && f.properties.rsrp)
+    .map(f => {
+      const rsrp = parseFloat(f.properties.rsrp);
+      const intensity = Math.max(0, Math.min(1, (rsrp + 140) / 96));
+      return [
+        f.geometry.coordinates[1],
+        f.geometry.coordinates[0],
+        intensity
+      ];
+    });
+
+  if (points.length === 0) return;
+
+  heatLayer = L.heatLayer(points, {
+    radius:    35,
+    blur:      25,
+    maxZoom:   17,
+    max:       1.0,
+    gradient:  { 0.0: '#003d0f', 0.3: '#ffaa00', 0.6: '#ff6600', 1.0: '#ff2a2a' }
+  }).addTo(map);
+}
+
 async function fetchMap() {
   const res  = await fetch(`${API_BASE}/api/v1/map`);
   const data = await res.json();
@@ -631,6 +685,8 @@ async function fetchMap() {
 
     markerMap[ci] = marker;
   });
+
+  updateHeatLayer(data.features);
 }
 
 // ── Main refresh ──────────────────────────────────────────────────────────────
