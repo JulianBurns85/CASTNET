@@ -46,6 +46,10 @@ NODE_ID       = os.environ.get("CASTNET_NODE_ID", "ulefone_tab4_node1")
 API_KEY       = os.environ.get("CASTNET_API_KEY", "")
 POLL_INTERVAL = int(os.environ.get("CASTNET_POLL", "30"))
 
+# Communal server -- optional second reporting target
+CASTNET_COMMUNAL_API = os.environ.get("CASTNET_COMMUNAL_API", "")
+CASTNET_COMMUNAL_KEY = os.environ.get("CASTNET_COMMUNAL_KEY", "")
+
 # Portable log path — works on Termux, Linux, Windows
 LOG_FILE   = Path.home() / "castnet_log.json"
 QUEUE_FILE = Path.home() / "castnet_offline_queue.json"
@@ -249,6 +253,21 @@ def flush_offline_queue(headers):
         QUEUE_FILE.unlink(missing_ok=True)
 
 
+def report_to_communal(event):
+    if not CASTNET_COMMUNAL_API or not CASTNET_COMMUNAL_KEY:
+        return
+    import requests
+    try:
+        headers = {"X-Castnet-Key": CASTNET_COMMUNAL_KEY}
+        resp = requests.post(CASTNET_COMMUNAL_API, json=event, headers=headers, timeout=5)
+        if resp.status_code == 200:
+            print(f"  [COMMUNAL] Reported to community server -- {resp.json().get('status')}")
+        else:
+            print(f"  [COMMUNAL] Unexpected response {resp.status_code}")
+    except Exception as e:
+        print(f"  [COMMUNAL] Offline -- {e}")
+
+
 def report_to_api(event):
     import requests
     headers = {}
@@ -279,6 +298,7 @@ def main():
   API      : {CASTNET_API}
   Auth     : {"configured" if API_KEY else "NOT SET — unauthenticated"}
   Log      : {LOG_FILE}
+  Communal : {CASTNET_COMMUNAL_API or "not configured"}
   CIDs     : {len(KNOWN_ROGUE_CIDS)} confirmed rogue | {len(WATCHLIST_CIDS)} watchlist
   Interval : {POLL_INTERVAL}s
   Started  : {datetime.now(timezone.utc).isoformat()}
@@ -343,6 +363,7 @@ def main():
                     print(f"  *** GPS: {lat:.6f}, {lon:.6f}")
                 log_event(event)
                 report_to_api(event)
+                report_to_communal(event)
 
         elif watchlist_this_scan:
             print(f" — 👀 {len(watchlist_this_scan)} watchlist CID(s) seen (not reported)")
