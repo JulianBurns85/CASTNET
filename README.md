@@ -164,7 +164,7 @@ Full forensic analysis: [rayhunter-threat-analyzer](https://github.com/JulianBur
 - [x] v0.1 — Two-node live network operational
 - [ ] v0.2 — Node heartbeat + offline buffering
 - [x] v0.3 — GPS tagging on mobile nodes (live — Termux GPS)
-- [ ] v0.4 — Trilateration engine (3+ nodes + RSRP)
+- [x] v0.4 — Trilateration engine (3+ nodes + RSRP)
 - [ ] v0.5 — RSRP signal strength heat map overlay
 - [ ] v1.0 — OBD-II vehicle node (Pi Zero 2W)
 
@@ -216,3 +216,4 @@ MIT — see LICENSE
 *— Julian Burns, Cranbourne East VIC, 2026*
 
 *"Because Stingrays are fish too." 🎣*
+
