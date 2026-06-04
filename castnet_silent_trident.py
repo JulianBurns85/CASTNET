@@ -47,7 +47,7 @@ WATCH_INTERVAL = 60   # seconds between runs in watch mode
 SIMULTANEOUS_WINDOW_SECONDS = 120
 
 # Minimum nodes required for trilateration
-MIN_NODES = 2   # 2 = weighted centroid, 3+ = full trilateration
+MIN_NODES = 1   # 2 = weighted centroid, 3+ = full trilateration
 
 # LTE path loss model constants (Free Space + suburban correction)
 # RSRP (dBm) → distance (metres)

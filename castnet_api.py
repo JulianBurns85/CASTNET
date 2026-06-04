@@ -308,6 +308,118 @@ def index():
     })
 
 
+
+
+@app.route("/api/v1/trident", methods=["GET"])
+def trident():
+    """Silent Trident on demand — returns latest location estimates."""
+    from datetime import datetime, timezone, timedelta
+    window = int(request.args.get("hours", 2))
+    min_nodes = int(request.args.get("min_nodes", 1))
+    cutoff = (datetime.now(timezone.utc) - timedelta(hours=window)).isoformat()
+    conn = get_db()
+    rows = conn.execute("""
+        SELECT ci, tac, node_id, latitude, longitude, rsrp, timing_advance, timestamp
+        FROM detections
+        WHERE confirmed_rogue=1 AND latitude IS NOT NULL AND timestamp > ?
+        ORDER BY timestamp DESC
+    """, (cutoff,)).fetchall()
+    conn.close()
+    by_cid = {}
+    for r in rows:
+        ci = r["ci"]
+        if ci not in by_cid:
+            by_cid[ci] = {}
+        node = r["node_id"]
+        if node not in by_cid[ci]:
+            by_cid[ci][node] = r
+    results = []
+    for ci, nodes in by_cid.items():
+        if len(nodes) < min_nodes:
+            continue
+        nl = list(nodes.values())
+        lats = [n["latitude"] for n in nl]
+        lons = [n["longitude"] for n in nl]
+        rsrps = [n["rsrp"] for n in nl if n["rsrp"]]
+        tas = [n["timing_advance"] for n in nl if n["timing_advance"]]
+        est_lat = sum(lats)/len(lats)
+        est_lon = sum(lons)/len(lons)
+        ta_dist = round(sum(tas)/len(tas)*78,1) if tas else None
+        mean_rsrp = round(sum(rsrps)/len(rsrps),1) if rsrps else None
+        results.append({
+            "ci": ci,
+            "tac": nl[0]["tac"],
+            "node_count": len(nodes),
+            "nodes": list(nodes.keys()),
+            "estimated_lat": round(est_lat,7),
+            "estimated_lon": round(est_lon,7),
+            "ta_distance_m": ta_dist,
+            "mean_rsrp_dbm": mean_rsrp,
+            "maps_url": f"https://maps.google.com/?q={est_lat:.7f},{est_lon:.7f}",
+            "confidence": round(min(0.95, 0.3+len(nodes)*0.2),2),
+        })
+    return jsonify({"trident":"silent","timestamp":datetime.now(timezone.utc).isoformat(),"detections_found":len(results),"results":results})
+
+
+
+@app.route("/trident", methods=["GET"])
+def trident_html():
+    """Mobile-friendly Silent Trident dashboard."""
+    from datetime import datetime, timezone, timedelta
+    window = int(request.args.get("hours", 2))
+    cutoff = (datetime.now(timezone.utc) - timedelta(hours=window)).isoformat()
+    conn = get_db()
+    rows = conn.execute("""
+        SELECT ci, tac, node_id, latitude, longitude, rsrp, timing_advance, timestamp
+        FROM detections
+        WHERE confirmed_rogue=1 AND latitude IS NOT NULL AND timestamp > ?
+        ORDER BY timestamp DESC
+    """, (cutoff,)).fetchall()
+    conn.close()
+    by_cid = {}
+    for r in rows:
+        ci = r["ci"]
+        if ci not in by_cid:
+            by_cid[ci] = {}
+        if r["node_id"] not in by_cid[ci]:
+            by_cid[ci][r["node_id"]] = r
+    cards = ""
+    for ci, nodes in by_cid.items():
+        nl = list(nodes.values())
+        tas = [n["timing_advance"] for n in nl if n["timing_advance"]]
+        rsrps = [n["rsrp"] for n in nl if n["rsrp"]]
+        ta_dist = round(sum(tas)/len(tas)*78,0) if tas else "?"
+        mean_rsrp = round(sum(rsrps)/len(rsrps),1) if rsrps else "?"
+        tac = nl[0]["tac"]
+        lat = nl[0]["latitude"]
+        lon = nl[0]["longitude"]
+        cards += f"""<div class="card"><div class="cid">CID {ci}</div>
+<div class="row"><span>TAC</span><span>{tac}</span></div>
+<div class="row"><span>TA Distance</span><span class="hi">{ta_dist}m</span></div>
+<div class="row"><span>RSRP</span><span>{mean_rsrp} dBm</span></div>
+<div class="row"><span>Nodes</span><span>{", ".join(nodes.keys())}</span></div>
+<a class="maps" href="https://maps.google.com/?q={lat},{lon}" target="_blank">Open in Maps</a></div>"""
+    ts = datetime.now(timezone.utc).strftime("%H:%M UTC")
+    html = f"""<!DOCTYPE html><html><head><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Silent Trident</title><style>
+body{{background:#0a0a0a;color:#00ff88;font-family:monospace;padding:12px;margin:0}}
+h1{{font-size:1.1em;color:#00ffcc;margin:0 0 4px}}
+.sub{{color:#555;font-size:0.75em;margin-bottom:14px}}
+.card{{background:#111;border:1px solid #00ff8833;border-radius:8px;padding:12px;margin-bottom:10px}}
+.cid{{color:#00ffcc;font-weight:bold;margin-bottom:6px}}
+.row{{display:flex;justify-content:space-between;font-size:0.82em;padding:3px 0;border-bottom:1px solid #1a1a1a}}
+.hi{{color:#ffcc00;font-weight:bold}}
+.maps{{display:block;margin-top:8px;background:#00ff8818;color:#00ff88;text-align:center;padding:6px;border-radius:4px;text-decoration:none;font-size:0.8em}}
+.refresh{{display:block;text-align:center;margin-top:14px;color:#333;font-size:0.75em;text-decoration:none}}
+</style></head><body>
+<h1>🔱 CASTNET Silent Trident</h1>
+<div class="sub">Last {window}h — {ts} — {len(by_cid)} rogue CID(s)</div>
+{cards if cards else '<div class="card">No detections in window.</div>'}
+<a class="refresh" href="/trident">↻ Refresh</a>
+</body></html>"""
+    return html
+
+
 # ── Main ──────────────────────────────────────────────────────────────────────
 if __name__ == "__main__":
     if not API_KEY:
@@ -332,3 +444,5 @@ if __name__ == "__main__":
 """.format(cids=len(KNOWN_ROGUE_CIDS)))
 
     app.run(host="0.0.0.0", port=5000, debug=False)
+
+

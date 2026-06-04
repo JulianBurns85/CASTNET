@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-\"\"\"
+"""
 castnet_communal_api.py - CASTNET Communal Aggregation Server v0.1
 Multi-operator community IMSI catcher detection network.
 Because Stingrays are fish too. 🎣
-\"\"\"
+"""
 
 import hashlib, json, os, secrets, sqlite3
 from datetime import datetime, timezone, timedelta
@@ -53,7 +53,7 @@ def close_db(e=None):
 def init_db():
     DB_PATH.parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(DB_PATH)
-    conn.executescript(\"\"\"
+    conn.executescript("""
         CREATE TABLE IF NOT EXISTS operators (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             handle TEXT UNIQUE NOT NULL,
@@ -86,13 +86,13 @@ def init_db():
         CREATE INDEX IF NOT EXISTS idx_det_op  ON detections(operator_id);
         CREATE INDEX IF NOT EXISTS idx_det_ts  ON detections(timestamp);
         CREATE INDEX IF NOT EXISTS idx_cid_ci  ON community_cids(ci);
-    \"\"\")
+    """)
     for cid in SEED_ROGUE_CIDS:
-        conn.execute(\"\"\"
+        conn.execute("""
             INSERT OR IGNORE INTO community_cids
             (ci,tac,mcc,mnc,confidence,operator_count,total_reports,first_seen,last_seen,notes)
             VALUES (?,?,?,?,?,1,1,datetime('now'),datetime('now'),?)
-        \"\"\", (cid["ci"],cid["tac"],cid["mcc"],cid["mnc"],cid["confidence"],cid.get("notes","")))
+        """, (cid["ci"],cid["tac"],cid["mcc"],cid["mnc"],cid["confidence"],cid.get("notes","")))
     conn.commit()
     conn.close()
     print(f"[DB] Initialised at {DB_PATH} — {len(SEED_ROGUE_CIDS)} CIDs seeded")
@@ -154,11 +154,11 @@ def report_detection():
     shared = 1 if op["share_data"] else 0
     ts     = data.get("timestamp",datetime.now(timezone.utc).isoformat())
     db     = get_db()
-    db.execute(\"\"\"
+    db.execute("""
         INSERT INTO detections
         (operator_id,node_id,timestamp,ci,tac,mcc,mnc,rsrp,rssi,timing_advance,latitude,longitude,region,shared)
         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
-    \"\"\",(op["id"],data.get("node_id"),ts,int(ci),data.get("tac"),data.get("mcc"),data.get("mnc"),
+    """,(op["id"],data.get("node_id"),ts,int(ci),data.get("tac"),data.get("mcc"),data.get("mnc"),
           data.get("rsrp"),data.get("rssi"),data.get("timing_advance"),data.get("latitude"),data.get("longitude"),op["region"] or "",shared))
     _update_community_cid(db,data,op["id"])
     db.commit()
@@ -190,12 +190,12 @@ def community_cids():
 def community_map():
     hours = int(request.args.get("hours",168))
     since = (datetime.now(timezone.utc)-timedelta(hours=hours)).isoformat()
-    rows  = get_db().execute(\"\"\"
+    rows  = get_db().execute("""
         SELECT d.ci,d.tac,d.rsrp,d.latitude,d.longitude,d.region,d.timestamp,c.confidence,c.operator_count
         FROM detections d LEFT JOIN community_cids c ON d.ci=c.ci
         WHERE d.shared=1 AND d.latitude IS NOT NULL AND d.longitude IS NOT NULL AND d.timestamp>=?
         ORDER BY d.timestamp DESC LIMIT 2000
-    \"\"\", (since,)).fetchall()
+    """, (since,)).fetchall()
     features = [{"type":"Feature","geometry":{"type":"Point","coordinates":[r["longitude"],r["latitude"]]},"properties":dict(r)} for r in rows]
     return jsonify({"type":"FeatureCollection","features":features,"count":len(features)})
 
