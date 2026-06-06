@@ -1,4 +1,4 @@
-# CASTNET 🎣
+﻿# CASTNET 🎣
 ## Predator Hunter — v2.0
 
 **Distributed Civilian IMSI Catcher Detection and Geolocation Network**
@@ -235,4 +235,4 @@ MIT — see [LICENSE](LICENSE)
 
 *— Julian Burns, Cranbourne East VIC, 2026*
 
-> *"Because they killed Steve... YOU BASTARDS!!!"* ??
+> *"Because they killed Steve... YOU BASTARDS!!!" ??
