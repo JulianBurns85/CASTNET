@@ -35,7 +35,6 @@
     overflow: hidden;
   }
 
-  /* Scanline overlay */
   body::after {
     content: '';
     position: fixed;
@@ -48,10 +47,9 @@
       rgba(0,0,0,0.08) 4px
     );
     pointer-events: none;
-    z-index: 9999;
+    z-index: 9998;
   }
 
-  /* ── Header ── */
   header {
     padding: 8px 16px;
     border-bottom: 1px solid var(--border);
@@ -101,14 +99,12 @@
     50%       { opacity: 0.3; }
   }
 
-  /* ── Main layout ── */
   .main {
     display: flex;
     flex: 1;
     overflow: hidden;
   }
 
-  /* ── Sidebar ── */
   .sidebar {
     width: 290px;
     flex-shrink: 0;
@@ -133,7 +129,6 @@
     text-transform: uppercase;
   }
 
-  /* Nodes */
   .node-list { display: flex; flex-direction: column; gap: 6px; }
 
   .node-card {
@@ -157,7 +152,6 @@
   .node-stats { font-size: 0.62rem; color: var(--text-dim); display: flex; gap: 10px; }
   .node-stat-val { color: var(--green); }
 
-  /* CID reference panel */
   .cid-list {
     max-height: 120px;
     overflow-y: auto;
@@ -177,7 +171,6 @@
   .cid-num   { color: var(--red); }
   .cid-label { color: var(--text-dim); }
 
-  /* Detection feed */
   .feed {
     flex: 1;
     overflow-y: auto;
@@ -211,7 +204,6 @@
   .feed-node      { color: var(--amber); }
   .feed-rsrp      { color: var(--green-dim); }
 
-  /* ── Map ── */
   #map {
     flex: 1;
     background: #000d02;
@@ -233,7 +225,6 @@
   .leaflet-popup-tip          { background: var(--panel); }
   .leaflet-popup-close-button { color: var(--green) !important; }
 
-  /* ── Bottom bar ── */
   .bottom-bar {
     padding: 4px 16px;
     border-top: 1px solid var(--border);
@@ -261,7 +252,6 @@
     50%       { opacity: 0.4; transform: scale(0.8); }
   }
 
-  /* Loading screen */
   .loading {
     position: absolute;
     inset: 0;
@@ -300,7 +290,6 @@
 
   @keyframes loading { to { left: 100%; } }
 
-  /* API offline banner */
   .offline-banner {
     display: none;
     background: rgba(255,42,42,0.15);
@@ -310,6 +299,58 @@
     color: var(--red);
     text-align: center;
     flex-shrink: 0;
+  }
+
+  /* ── CRIKEY ALERT ── */
+  #crikey-container {
+    position: fixed;
+    bottom: -280px;
+    right: 24px;
+    z-index: 99999;
+    text-align: center;
+    transition: bottom 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    pointer-events: none;
+    user-select: none;
+  }
+
+  #crikey-container.show {
+    bottom: 0px;
+  }
+
+  #crikey-bubble {
+    background: linear-gradient(135deg, #ff2a2a, #ff8800);
+    color: #fff;
+    font-family: 'Orbitron', monospace;
+    font-size: 1rem;
+    font-weight: 900;
+    letter-spacing: 2px;
+    padding: 10px 18px;
+    border-radius: 8px 8px 0 0;
+    border: 2px solid #ffaa00;
+    border-bottom: none;
+    text-shadow: 1px 1px 0 #000, 0 0 10px #ff4400;
+    animation: crikey-pulse 0.4s infinite alternate;
+    white-space: nowrap;
+  }
+
+  #crikey-steve {
+    display: block;
+    font-size: 120px;
+    line-height: 1;
+    filter: drop-shadow(0 0 12px #ff8800) drop-shadow(0 -4px 20px #ff4400);
+    animation: crikey-bounce 0.3s infinite alternate;
+    background: linear-gradient(180deg, #1a0a00 0%, transparent 100%);
+    padding: 0 8px;
+  }
+
+  @keyframes crikey-pulse {
+    from { background: linear-gradient(135deg, #ff2a2a, #ff8800); }
+    to   { background: linear-gradient(135deg, #ff8800, #ff2a2a); }
+  }
+
+  @keyframes crikey-bounce {
+    from { transform: translateY(0px) rotate(-2deg); }
+    to   { transform: translateY(-6px) rotate(2deg); }
   }
 </style>
 </head>
@@ -323,8 +364,8 @@
 
 <header>
   <div>
-    <div class="logo">⬡ CASTNET</div>
-    <div class="tagline">CIVILIAN IMSI CATCHER DETECTION NETWORK — CRANBOURNE EAST VIC — v0.1.1</div>
+    <div class="logo">&#11041; CASTNET</div>
+    <div class="tagline">CIVILIAN IMSI CATCHER DETECTION NETWORK — CRANBOURNE EAST VIC — v2.0 PREDATOR HUNTER</div>
   </div>
   <div class="status-bar">
     <div class="status-item">
@@ -351,26 +392,26 @@
 </header>
 
 <div class="offline-banner" id="offline-banner">
-  ⚠ API OFFLINE — Displaying static known rogue CID data only
+  WARNING API OFFLINE — Displaying static known rogue CID data only
 </div>
 
 <div class="main">
   <div class="sidebar">
 
     <div class="sidebar-section">
-      <h3>▸ Active Nodes</h3>
+      <h3>&#9658; Active Nodes</h3>
       <div class="node-list" id="node-list">
         <div style="color:var(--text-dim);font-size:0.65rem">No nodes connected</div>
       </div>
     </div>
 
     <div class="sidebar-section">
-      <h3>▸ Known Rogue CIDs (18)</h3>
+      <h3>&#9658; Known Rogue CIDs (18)</h3>
       <div class="cid-list" id="cid-reference"></div>
     </div>
 
     <div class="sidebar-section" style="padding-bottom:4px">
-      <h3>▸ Detection Feed</h3>
+      <h3>&#9658; Detection Feed</h3>
     </div>
     <div class="feed" id="feed">
       <div style="color:var(--text-dim);font-size:0.65rem;padding:8px 12px">Waiting for detections...</div>
@@ -384,36 +425,37 @@
 <div class="bottom-bar">
   <div><span class="pulse"></span>LIVE — AUTO-REFRESH 30s</div>
   <div id="last-update">--</div>
-  <div>CASTNET v0.1.1 — Because Stingrays are fish too. 🎣</div>
+  <div>CASTNET v2.0 — Because they killed Steve... YOU BASTARDS!!!</div>
+</div>
+
+<!-- CRIKEY ALERT — Toasty mode — Steve Irwin Memorial Detection System -->
+<div id="crikey-container">
+  <div id="crikey-bubble">CRIKEY! STINGRAY DETECTED!</div>
+  <span id="crikey-steve">&#x1F98E;</span>
 </div>
 
 <script>
 // ── Configuration ─────────────────────────────────────────────────────────────
-const API_BASE   = 'http://192.168.1.239:5000';        // empty = same origin (Flask serves this file)
+const API_BASE   = 'http://192.168.1.239:5000';
 const REFRESH_MS = 30000;
 const HOME_LAT   = -38.1135;
 const HOME_LON   = 145.2830;
 const HOME_LABEL = 'Home — Cranbourne East';
 
-// Known rogue CIDs — KEEP IN SYNC with castnet_api.py and castnet_node.py
-// Updated May 2026: 18 confirmed CIDs across Telstra TAC=12385 and Vodafone TAC=30336
 const ROGUE_CID_DATA = [
-  // Telstra AU — TAC 12385
-  { ci: 137713195, label: 'Telstra TAC=12385', note: 'Highest obs count' },
-  { ci: 137713175, label: 'Telstra TAC=12385', note: 'Prendergast Ave 331m' },
-  { ci: 137713165, label: 'Telstra TAC=12385', note: 'Confirmed' },
-  { ci: 137713155, label: 'Telstra TAC=12385', note: 'Confirmed' },
-  { ci: 135836191, label: 'Telstra TAC=12385', note: 'Collison Rd 912m' },
-  { ci: 135836171, label: 'Telstra TAC=12385', note: 'Casey Fields 2424m' },
-  { ci: 135836161, label: 'Telstra TAC=12385', note: 'Added May 2026' },
-  // Vodafone AU — TAC 30336
+  { ci: 137713195, label: 'Telstra TAC=12385',  note: 'Highest obs count' },
+  { ci: 137713175, label: 'Telstra TAC=12385',  note: 'Prendergast Ave 331m' },
+  { ci: 137713165, label: 'Telstra TAC=12385',  note: 'Confirmed' },
+  { ci: 137713155, label: 'Telstra TAC=12385',  note: 'Confirmed' },
+  { ci: 135836191, label: 'Telstra TAC=12385',  note: 'Collison Rd 912m' },
+  { ci: 135836171, label: 'Telstra TAC=12385',  note: 'Casey Fields 2424m' },
+  { ci: 135836161, label: 'Telstra TAC=12385',  note: 'Added May 2026' },
   { ci: 8409357,   label: 'Vodafone TAC=30336', note: 'Highest Voda obs' },
   { ci: 8409367,   label: 'Vodafone TAC=30336', note: 'Confirmed' },
   { ci: 8409387,   label: 'Vodafone TAC=30336', note: 'Confirmed' },
   { ci: 8409397,   label: 'Vodafone TAC=30336', note: 'Anomalous sub-2s' },
   { ci: 8435470,   label: 'Vodafone TAC=30336', note: 'Added May 2026' },
   { ci: 8435480,   label: 'Vodafone TAC=30336', note: 'Confirmed' },
-  // Post-ACMA visit — appeared 8 May 2026
   { ci: 8666381,   label: 'Post-ACMA May 8',    note: 'Zero OpenCelliD hits' },
   { ci: 8666391,   label: 'Post-ACMA May 8',    note: 'Zero OpenCelliD hits' },
   { ci: 8666411,   label: 'Post-ACMA May 8',    note: 'Zero OpenCelliD hits' },
@@ -421,12 +463,26 @@ const ROGUE_CID_DATA = [
 
 const ROGUE_CIDS = new Set(ROGUE_CID_DATA.map(d => d.ci));
 
-// Known OpenCelliD geo-locations for static fallback display
 const KNOWN_LOCATIONS = [
   { ci: 137713175, lat: -38.1108, lon: 145.2856, label: 'Prendergast Ave, CE',  radius: 331,  note: 'OpenCelliD Apr 2026' },
   { ci: 135836191, lat: -38.1090, lon: 145.2910, label: 'Collison Rd, CE',      radius: 912,  note: 'OpenCelliD Oct 2025' },
   { ci: 135836171, lat: -38.0990, lon: 145.3050, label: 'Casey Fields area',    radius: 2424, note: 'OpenCelliD Aug 2025' },
 ];
+
+// ── CRIKEY alert system ───────────────────────────────────────────────────────
+let lastRogueCount = null;
+let crikeyCooldown = false;
+
+function showCrikey() {
+  if (crikeyCooldown) return;
+  crikeyCooldown = true;
+  const el = document.getElementById('crikey-container');
+  el.classList.add('show');
+  setTimeout(() => {
+    el.classList.remove('show');
+    setTimeout(() => { crikeyCooldown = false; }, 15000); // 15s cooldown between alerts
+  }, 3500);
+}
 
 // ── Map setup ─────────────────────────────────────────────────────────────────
 const map = L.map('map', {
@@ -440,7 +496,6 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
   maxZoom: 19,
 }).addTo(map);
 
-// Home marker
 const homeIcon = L.divIcon({
   html: `<div style="
     width:12px;height:12px;
@@ -456,7 +511,6 @@ L.marker([HOME_LAT, HOME_LON], { icon: homeIcon })
 
 const markerMap = {};
 
-// ── Marker icons ──────────────────────────────────────────────────────────────
 function rogueIcon(rsrp) {
   const intensity = rsrp ? Math.min(1, Math.max(0.3, (rsrp + 140) / 80)) : 0.5;
   const r = Math.round(255 * intensity);
@@ -483,32 +537,28 @@ function staticRogueIcon() {
   });
 }
 
-// ── Static fallback: known OpenCelliD locations ───────────────────────────────
 function showStaticKnownLocations() {
   KNOWN_LOCATIONS.forEach(loc => {
-    // Range ring
     L.circle([loc.lat, loc.lon], {
       radius: loc.radius,
       color: '#ff2a2a', fillColor: '#ff2a2a', fillOpacity: 0.07,
       weight: 1, dashArray: '4 4',
     }).addTo(map);
 
-    // Centre marker
     L.marker([loc.lat, loc.lon], { icon: staticRogueIcon() })
       .addTo(map)
       .bindPopup(`
         <div style="min-width:160px">
-          <div style="color:#ff2a2a;font-weight:bold;margin-bottom:4px">🚨 ROGUE CID=${loc.ci}</div>
+          <div style="color:#ff2a2a;font-weight:bold;margin-bottom:4px">ROGUE CID=${loc.ci}</div>
           <div>${loc.label}</div>
           <div style="color:#007a1e;font-size:0.9em">${loc.note}</div>
-          <div style="color:#007a1e;font-size:0.9em">±${loc.radius}m radius</div>
-          <div style="color:#ffaa00;margin-top:4px;font-size:0.85em">⚠ Static — no live GPS data yet</div>
+          <div style="color:#007a1e;font-size:0.9em">+/-${loc.radius}m radius</div>
+          <div style="color:#ffaa00;margin-top:4px;font-size:0.85em">Static — no live GPS data yet</div>
         </div>
       `);
   });
 }
 
-// ── Populate CID reference sidebar ───────────────────────────────────────────
 function populateCidReference() {
   const el = document.getElementById('cid-reference');
   el.innerHTML = '';
@@ -523,16 +573,22 @@ function populateCidReference() {
   });
 }
 
-// ── Fetch: summary ────────────────────────────────────────────────────────────
 async function fetchSummary() {
   const res  = await fetch(`${API_BASE}/api/v1/summary`);
   const data = await res.json();
 
-  document.getElementById('hdr-nodes').textContent = data.active_nodes    ?? '--';
-  document.getElementById('hdr-rogue').textContent = data.rogue_detections ?? '--';
-  document.getElementById('hdr-cids').textContent  = data.unique_rogue_cids ?? '--';
+  document.getElementById('hdr-nodes').textContent = data.active_nodes        ?? '--';
+  document.getElementById('hdr-rogue').textContent = data.rogue_detections     ?? '--';
+  document.getElementById('hdr-cids').textContent  = data.unique_rogue_cids    ?? '--';
   document.getElementById('hdr-known').textContent = data.known_rogue_cid_count ?? ROGUE_CID_DATA.length;
-  document.getElementById('hdr-total').textContent = data.total_events    ?? '--';
+  document.getElementById('hdr-total').textContent = data.total_events         ?? '--';
+
+  // CRIKEY trigger — new rogue detection since last poll
+  const currentCount = data.rogue_detections || 0;
+  if (lastRogueCount !== null && currentCount > lastRogueCount) {
+    showCrikey();
+  }
+  lastRogueCount = currentCount;
 
   const nodeList = document.getElementById('node-list');
   nodeList.innerHTML = '';
@@ -546,7 +602,7 @@ async function fetchSummary() {
       const card = document.createElement('div');
       card.className = 'node-card';
       card.innerHTML = `
-        <div class="node-name">▸ ${n.node_id}</div>
+        <div class="node-name">&#9658; ${n.node_id}</div>
         <div class="node-stats">
           <span>HITS: <span class="node-stat-val">${n.rogue_hits}</span></span>
           <span>SCANS: <span class="node-stat-val">${n.total_scans}</span></span>
@@ -558,7 +614,6 @@ async function fetchSummary() {
   return data;
 }
 
-// ── Fetch: detections ────────────────────────────────────────────────────────
 async function fetchDetections() {
   const res  = await fetch(`${API_BASE}/api/v1/detections?hours=24&rogue_only=true`);
   const data = await res.json();
@@ -576,7 +631,7 @@ async function fetchDetections() {
     item.className = 'feed-item rogue';
     const ts = new Date(d.timestamp).toLocaleTimeString('en-AU');
     item.innerHTML = `
-      <div><span class="feed-cid">🚨 CID=${d.ci}</span> <span class="feed-rsrp">${d.rsrp ?? '?'}dBm</span></div>
+      <div><span class="feed-cid">ROGUE CID=${d.ci}</span> <span class="feed-rsrp">${d.rsrp ?? '?'}dBm</span></div>
       <div><span class="feed-node">${d.node_id}</span> <span class="feed-ts">${ts}</span></div>`;
     feed.appendChild(item);
   });
@@ -584,21 +639,15 @@ async function fetchDetections() {
   return data;
 }
 
-// ── Fetch: map GeoJSON ────────────────────────────────────────────────────────
 async function fetchMap() {
   const res  = await fetch(`${API_BASE}/api/v1/map`);
   const data = await res.json();
 
-  // Clear existing live markers
   Object.values(markerMap).forEach(m => map.removeLayer(m));
   Object.keys(markerMap).forEach(k => delete markerMap[k]);
 
-  if (!data.features || data.features.length === 0) {
-    // No live GPS data yet — static known locations already shown on boot
-    return;
-  }
+  if (!data.features || data.features.length === 0) return;
 
-  // Group by CID — show one marker per CID at most recent location
   const byCid = {};
   data.features.forEach(f => {
     const ci = f.properties.ci;
@@ -617,7 +666,7 @@ async function fetchMap() {
       .addTo(map)
       .bindPopup(`
         <div style="min-width:160px">
-          <div style="color:#ff2a2a;font-weight:bold;margin-bottom:4px">🚨 ROGUE CID=${ci}</div>
+          <div style="color:#ff2a2a;font-weight:bold;margin-bottom:4px">ROGUE CID=${ci}</div>
           <div>TAC: ${p.tac ?? '?'}</div>
           <div>RSRP: ${p.rsrp ?? '?'} dBm</div>
           <div>TA: ${p.timing_advance ?? '?'}</div>
@@ -633,7 +682,6 @@ async function fetchMap() {
   });
 }
 
-// ── Main refresh ──────────────────────────────────────────────────────────────
 async function refresh() {
   try {
     await Promise.all([fetchSummary(), fetchDetections(), fetchMap()]);
@@ -647,10 +695,9 @@ async function refresh() {
   }
 }
 
-// ── Boot ──────────────────────────────────────────────────────────────────────
 window.addEventListener('load', async () => {
   populateCidReference();
-  showStaticKnownLocations();   // always show known geo-locations
+  showStaticKnownLocations();
   await refresh();
   document.getElementById('loading').style.display = 'none';
   setInterval(refresh, REFRESH_MS);
