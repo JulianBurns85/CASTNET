@@ -32,7 +32,7 @@ import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
 
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_file
 
 app = Flask(__name__)
 
@@ -443,6 +443,12 @@ if __name__ == "__main__":
   Listening on 0.0.0.0:5000
 """.format(cids=len(KNOWN_ROGUE_CIDS)))
 
-    app.run(host="0.0.0.0", port=5000, debug=False)
+
+@app.route("/dashboard")
+def dashboard():
+    return send_file("/home/overkill/castnet/dashboard/castnet_map.html")
+
+app.run(host="0.0.0.0", port=5000, debug=False)
+
 
 
